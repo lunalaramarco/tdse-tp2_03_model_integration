@@ -1,0 +1,75 @@
+task_system_attribute.h contiene:
+
+
+	La tabla de estados y excitaciones definida para el diagrama de estados diseñado para el modelo del
+	sistema. 
+	
+	task_system_ev: tipos enumerativos para los eventos definidos por el modelo 
+	task_system_st: tipos enumerativos para los estados definidos por el modelo 
+	
+    la declaración de los tipos estructuras de datos (dta) del sistema
+    
+    
+    task_system_dta_t: estructura de 3 campos que se actualiza mediante la ejecucion de task_sensor.c
+    cuyos campos son:
+    	un campo que indica el valor actual del tick
+    	un campo que indica el estado actual del diagrama de estados
+    	un campo que indica el evento actual del diagrama de estados  
+    	un campo booleano que se utiliza como señal para el posterior procesamiento de eventos 
+    
+task_system.c contiene:
+
+	definiciones para distintos valores de tick a utilizar.
+
+	task_system_dta: una estructura de datos del sistema a utilizar. Se debe inicializar los campos del mismo,
+	con el estado inicial segun el diagrama definido y se inicializan su variable tick, evento y flag.
+	
+	Se define la cantidad de sistemas, segun la cantidad de elementos en la lista de estructuras.
+    
+    el método task_system_init(), inicializa el statechart del sistema, donde:
+        se imprime por consola el método invocado 
+        se inicializa la estructura de datos (dta) del sistema
+        
+        
+    el método task_system_update(), ejecuta el statechart de sistema, donde:
+    	se lee y se obtiene el evento asociado a cada sensor mediante funciones definidas en la interface 
+    	sensor/sistema ( any_event_task_system() y get_event_task_system() ).
+    	
+    	mediante un switch se implementa la tabla de estados y excitaciones,
+    	con tantos case´s como estados tiene el mismo, en la cual:
+    	
+    		hay tantos case´s como estados tiene el statechart, donde:
+    		
+				cada case tiene tantos if , como transiciones salientes con eventos [guardas] tiene ese estado, donde:
+        
+        			en el cuerpo del if se puede: 
+        
+            			pasar al statechart siguiente (Actuator) un signal (evento) invocando put_event_task_actuator...
+            			modificar la variable de estado del statechart
+            			modificar el tick del statechart
+    	
+task_system_interface.c contiene:
+
+	definiciones para un evento indefinido y la cantidad máxima de eventos posibles en la cola.
+
+	queue_task_a: una estructura de 4 campos para la comunicación entre los statecharts del sensor con el sistema,
+    cuyos campos son:
+    	un campo que indica el indice inicial de la cola
+    	un campo que indica el indice final de la cola
+    	un campo que indica la cantidad de eventos a procesar de la cola
+    	la cola en si, es decir un arreglo de eventos del sistema
+    	
+   el método init_queue_event_task_system() inicializa la estructura de la cola, con eventos indefinidos.
+   
+   el método put_event_task_system(task_system_ev_t event) aumenta el contador de eventos a procesar, 
+   coloca en la cola el evento recibido, aumenta el indice de inicio de la cola y reinicia el inidice inicial de la cola de haberse desbordado. 
+
+   el método get_event_task_system() devuelve por interfaz el primer evento recibido (cola tipo FIFO), 
+   disminuye el contador de eventos a procesar, reemplaza el evento devuelto por un evento indefinido, 
+   aumenta el indice de final de la cola y reinicia el inidice final de la cola de haberse desbordado. 
+   
+   el método any_event_task_system() devuelve un booleano de haber algún evento por procesar, esto lo realiza
+   verificando si el indice del inicio de la cola es distinto del indice del final de la misma. Esto se debe a
+   que a medida de que se reciben eventos del sensor, se aumenta el indice inicial mientras que a medida de que
+   se devuelve el evento a procesar por el sistema se se aumenta el indice final. De modo que si estos indices 
+   son distintos, significa que hay eventos que fueron recibidos pero no enviados al sistema para ser procesados.
